@@ -9,7 +9,7 @@
         /* 基本重置和字體設定 */
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #e6e6fa; /* 淡紫色背景 */
+            background-color: #e6e6fa; 
             color: #333;
             display: flex;
             justify-content: center;
@@ -22,11 +22,12 @@
         /* 內容容器 */
         .container {
             background-color: #ffffff;
-            padding: 30px;
+            padding: 30px 20px; /* 調整左右 padding */
             border-radius: 20px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            max-width: 450px;
+            max-width: 450px; 
             width: 90%;
+            margin: 20px auto; /* 上下留出空間，防止被手機頂部遮擋 */
         }
 
         /* 標題 */
@@ -35,7 +36,7 @@
             margin-bottom: 20px;
         }
 
-        /* 分數和計時器顯示板 */
+        /* 狀態顯示板 (手機優化) */
         #status-board {
             font-size: 1.1em;
             color: #333;
@@ -43,13 +44,20 @@
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 10px;
-            display: flex;
-            justify-content: space-around;
-            text-align: left;
+            
+            /* *** 關鍵優化：在窄螢幕上將分數和時間垂直疊放 *** */
+            display: block; /* 預設為區塊，垂直疊放 */
+            text-align: center;
         }
         
         #score-board, #time-board {
-            padding: 0 10px;
+            padding: 5px 0; /* 增加上下間距 */
+            border-bottom: 1px dashed #e0e0e0; /* 分隔線 */
+        }
+        
+        #time-board {
+            border-bottom: none; /* 最後一項不需要底線 */
+            padding-top: 10px;
         }
         
         .stat-value {

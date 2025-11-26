@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>九因歌大挑戰！ (計時版 - 無 0/1)</title>
+    <title>九因歌大挑戰！ (錯誤追蹤版)</title>
     
     <style>
         /* 基本重置和字體設定 */
@@ -22,12 +22,12 @@
         /* 內容容器 */
         .container {
             background-color: #ffffff;
-            padding: 30px 20px; /* 調整左右 padding */
+            padding: 30px 20px; 
             border-radius: 20px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             max-width: 450px; 
             width: 90%;
-            margin: 20px auto; /* 上下留出空間，防止被手機頂部遮擋 */
+            margin: 20px auto; 
         }
 
         /* 標題 */
@@ -36,7 +36,7 @@
             margin-bottom: 20px;
         }
 
-        /* 狀態顯示板 (手機優化) */
+        /* 狀態顯示板 */
         #status-board {
             font-size: 1.1em;
             color: #333;
@@ -45,24 +45,26 @@
             border: 1px solid #ccc;
             border-radius: 10px;
             
-            /* *** 關鍵優化：在窄螢幕上將分數和時間垂直疊放 *** */
-            display: block; /* 預設為區塊，垂直疊放 */
-            text-align: center;
+            display: block; 
+            text-align: left; 
         }
         
-        #score-board, #time-board {
-            padding: 5px 0; /* 增加上下間距 */
-            border-bottom: 1px dashed #e0e0e0; /* 分隔線 */
+        .stat-item {
+            padding: 5px 0;
+            border-bottom: 1px dashed #e0e0e0;
+            overflow: hidden; /* 確保浮動內容不會影響佈局 */
         }
         
-        #time-board {
-            border-bottom: none; /* 最後一項不需要底線 */
-            padding-top: 10px;
+        #accuracy-board {
+            border-bottom: none;
+            padding-top: 5px;
+            font-weight: bold; 
         }
         
         .stat-value {
             font-weight: bold;
             color: #ff7f50;
+            float: right; 
         }
 
         /* 問題顯示區塊 */
@@ -97,6 +99,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
+            margin-bottom: 20px; /* 增加底部空間 */
         }
 
         button:hover {
@@ -118,6 +121,29 @@
         .wrong {
             color: #ff0000;
         }
+
+        /* 錯誤列表樣式 */
+        #error-summary {
+            margin-top: 30px;
+            padding: 15px;
+            border: 2px solid #ff9999;
+            border-radius: 10px;
+            background-color: #ffeaea;
+            text-align: left;
+        }
+
+        #error-list {
+            list-style-type: decimal; /* 使用數字列表 */
+            padding-left: 20px;
+            margin-top: 10px;
+            font-size: 1.0em;
+        }
+
+        #error-list li {
+            margin-bottom: 5px;
+            color: #cc0000;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -125,12 +151,20 @@
         <h1>🌟 1-9 乘數練習 🌟</h1>
         
         <div id="status-board">
-            <div id="score-board">
-                答對：<span id="score" class="stat-value">0</span> / 
-                總題：<span id="total-questions" class="stat-value">0</span>
-            </div>
-            <div id="time-board">
+            <div class="stat-item" id="time-board">
                 總用時：<span id="total-time" class="stat-value">0s</span>
+            </div>
+            <div class="stat-item">
+                總嘗試題數：<span id="total-questions" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                答對次數：<span id="score" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+                答錯次數：<span id="mistakes" class="stat-value">0</span>
+            </div>
+            <div class="stat-item" id="accuracy-board">
+                **目前準確度**：<span id="accuracy" class="stat-value">--</span>
             </div>
         </div>
         
@@ -143,6 +177,11 @@
         
         <p id="result-message" class="message"></p >
         <p id="question-time" class="message"></p >
+
+        <div id="error-summary" style="display:none;">
+            <h3>🚨 錯題清單：</h3>
+            <ol id="error-list"></ol>
+        </div>
     </div>
 
     <script>
@@ -150,34 +189,69 @@
         let currentNum1 = 0;
         let currentNum2 = 0;
         let score = 0;
-        let totalQuestions = 0;
+        let mistakes = 0; 
+        let totalQuestions = 0; 
         let startTime = 0;           
         let totalTimeSeconds = 0;    
         let totalTimerInterval;      
+        let errorList = []; // *** 新增：存儲錯誤題目的列表 ***
 
         // 獲取 DOM 元素
         const num1El = document.getElementById('num1');
         const num2El = document.getElementById('num2');
         const scoreEl = document.getElementById('score');
+        const mistakesEl = document.getElementById('mistakes'); 
         const totalQuestionsEl = document.getElementById('total-questions');
         const totalTimeEl = document.getElementById('total-time');
+        const accuracyEl = document.getElementById('accuracy'); 
         const inputEl = document.getElementById('answer-input');
         const resultMessageEl = document.getElementById('result-message');
         const questionTimeEl = document.getElementById('question-time');
+        const errorSummaryEl = document.getElementById('error-summary'); // 新增
+        const errorListEl = document.getElementById('error-list');       // 新增
 
         // 函數：更新總用時顯示
         function updateTotalTime() {
             totalTimeSeconds++;
             totalTimeEl.textContent = totalTimeSeconds + 's';
         }
+        
+        // 函數：更新準確度顯示
+        function updateAccuracy() {
+            if (totalQuestions === 0) {
+                accuracyEl.textContent = '--';
+            } else {
+                const accuracyRate = (score / totalQuestions) * 100;
+                accuracyEl.textContent = accuracyRate.toFixed(1) + '%'; 
+            }
+        }
+        
+        // 函數：更新錯誤列表顯示 *** 新增 ***
+        function updateErrorListDisplay() {
+            if (errorList.length === 0) {
+                errorSummaryEl.style.display = 'none';
+                errorListEl.innerHTML = '';
+                return;
+            }
+
+            // 清空舊列表
+            errorListEl.innerHTML = ''; 
+            
+            // 重新繪製新列表
+            errorList.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.textContent = item;
+                errorListEl.appendChild(listItem);
+            });
+
+            errorSummaryEl.style.display = 'block'; // 顯示錯誤區塊
+        }
 
         // 函數：生成新的乘數問題 (範圍：2到9)
         function generateQuestion() {
-            // 記錄新問題的開始時間
             startTime = Date.now();
             questionTimeEl.textContent = ''; 
 
-            // *** 關鍵修改：從 2 到 9 (共 8 個數字) ***
             currentNum1 = Math.floor(Math.random() * 8) + 2;
             currentNum2 = Math.floor(Math.random() * 8) + 2;
             
@@ -207,9 +281,7 @@
             totalQuestions++;
             totalQuestionsEl.textContent = totalQuestions;
             
-            // 計算單題用時
             const timeTaken = ((endTime - startTime) / 1000).toFixed(2); 
-            
             let message = '';
 
             if (userAnswer === correctAnswer) {
@@ -218,10 +290,20 @@
                 message = '✅ 太棒了！答案正確！';
                 resultMessageEl.className = 'message correct';
             } else {
+                mistakes++; 
+                mistakesEl.textContent = mistakes;
+                
+                // *** 關鍵修改：將錯題加入列表 ***
+                const errorItem = `${currentNum1} × ${currentNum2} = ${correctAnswer} (你答 ${userAnswer})`;
+                errorList.push(errorItem);
+                updateErrorListDisplay(); // 更新顯示
+                
                 message = `❌ 錯了，正確答案是 ${correctAnswer}。`;
                 resultMessageEl.className = 'message wrong';
             }
             
+            updateAccuracy();
+
             resultMessageEl.textContent = message;
             questionTimeEl.textContent = `這題用時: ${timeTaken} 秒`;
 
@@ -238,11 +320,10 @@
 
         // 網頁載入完成後
         window.onload = function() {
-            // 啟動總計時器，每秒更新一次
             totalTimerInterval = setInterval(updateTotalTime, 1000);
-            
-            // 生成第一個問題
             generateQuestion();
+            updateAccuracy();
+            updateErrorListDisplay(); // 確保初始是隱藏的
         }
     </script>
 </body>
